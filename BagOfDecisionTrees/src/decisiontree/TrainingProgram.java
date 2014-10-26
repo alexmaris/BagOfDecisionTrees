@@ -91,8 +91,9 @@ public class TrainingProgram {
 			trainTrees(tempInstances, 5);
 
 			// TODO: temporary stop while testing...
-			/*if (i == 0)
-				break;*/
+			/*
+			 * if (i == 0) break;
+			 */
 		}
 
 		// Print confusion matrix for the data set aside for testing
@@ -112,9 +113,10 @@ public class TrainingProgram {
 
 		int reportSplitsize = instanceData.size() / 5;
 		for (int i = 0; i < instanceData.size(); i++) {
-			if ((i%reportSplitsize) == 0) {
-				log.info("Classifying testing data " + ((double)i/instanceData.size()*100) + "% complete ("
-						+ bagOfTrees.count() + " trees built)");
+			if ((i % reportSplitsize) == 0) {
+				log.info("Classifying testing data "
+						+ ((double) i / instanceData.size() * 100)
+						+ "% complete (" + bagOfTrees.count() + " trees built)");
 			}
 
 			Instance instance = parseStringToInstance(instanceData.get(i));
