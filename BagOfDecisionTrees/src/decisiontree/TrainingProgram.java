@@ -15,7 +15,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class TrainingProgram {
-	private static final Log log = LogFactory.getLog(BagOfTrees.class);
+	private static final Log log = LogFactory.getLog(TrainingProgram.class);
 
 	private String[] attributeNames;
 	private String classifier;
@@ -69,13 +69,16 @@ public class TrainingProgram {
 		// trained from
 		int dataForTraining = rawTrainingData.size() - (rawTrainingData.size() / 66);
 		int dataForTesting = rawTrainingData.size() - dataForTraining;
-		int dataSplitFactor = 200;
+		int dataSplitFactor = 10;
 		int dataSplit = dataForTraining / dataSplitFactor;
+		int numberOfTreesEachSplit = 24;
+
+		int reportSplitsize = dataSplitFactor / 5;
 
 		for (int i = 0; i < dataSplitFactor; i++) {
-			if ((i % 5) == 0) {
-				log.info("Creating trees for data split " + i + "% complete (" + bagOfTrees.count()
-						+ " trees built)");
+			if ((i % reportSplitsize) == 0) {
+				log.info("Creating trees for data split " + (int) ((double) i / dataSplitFactor * 100)
+						+ "% complete (" + bagOfTrees.count() + " trees built)");
 			}
 			int fromItem = i * dataSplit;
 			// In case of odd numbers, make sure we catch the last record
@@ -84,11 +87,12 @@ public class TrainingProgram {
 			List<Instance> tempInstances = parseStringToInstance(rawTrainingData.subList(fromItem, toItem));
 
 			// Train trees for this sub-split of data
-			trainTrees(tempInstances, 5);
+			trainTrees(tempInstances, numberOfTreesEachSplit);
 
 			// TODO: temporary stop while testing...
-			if (i == 10)
-				break;
+			/*
+			 * if (i == 10) break;
+			 */
 
 		}
 
@@ -109,7 +113,7 @@ public class TrainingProgram {
 		int reportSplitsize = instanceData.size() / 5;
 		for (int i = 0; i < instanceData.size(); i++) {
 			if ((i % reportSplitsize) == 0) {
-				log.info("Classifying testing data " + (int)((double) i / instanceData.size() * 100)
+				log.info("Classifying testing data " + (int) ((double) i / instanceData.size() * 100)
 						+ "% complete");
 			}
 
@@ -186,13 +190,14 @@ public class TrainingProgram {
 	 */
 	private void trainTrees(List<Instance> instanceList, int treeCount) {
 		Id3[] trees = new Id3[treeCount];
-
+		// Take 66% of the instances at random and train a tree from them
+		int trainingSize = instanceList.size() - (instanceList.size() / 66);
+		
+		log.debug("Training trees on " + trainingSize + " data rows.");
+		
 		for (int i = 0; i < treeCount; i++) {
-			// Take 66% of the instances at random and train a tree from them
-			int trainingSize = instanceList.size() - (instanceList.size() / 66);
-			Instances instances = new Instances(instanceList.subList(0, trainingSize - 1));
 
-			log.debug("Training tree on " + trainingSize + " data rows.");
+			Instances instances = new Instances(instanceList.subList(0, trainingSize - 1));
 
 			// Instantiate new TreeTrainer using the loaded instances
 			TreeTrainer treeTrainer = new TreeTrainer(instances);
@@ -203,6 +208,8 @@ public class TrainingProgram {
 			// Test the tree's mis-classification rate across the unused 33% of
 			// instances
 			testTree(trees[i], instanceList.subList(trainingSize, instanceList.size()));
+			
+			Collections.shuffle(instanceList);
 		}
 
 		// Add to the bag the randomly trained trees
@@ -283,7 +290,7 @@ public class TrainingProgram {
 		long t = System.currentTimeMillis();
 
 		// testBagOfTrees();
-		String PATH_TO_FILE = "data/kddcup.data.txt"; // kddcup.data_10_percent.txt
+		String PATH_TO_FILE = "data/kddcup.data_2_percent.txt"; // kddcup.data_10_percent.txt
 		String PATH_TO_SERIALIZED_BOT = "data/kddcup.trees";
 		TrainingProgram trainingProgram = new TrainingProgram();
 		trainingProgram.Run(PATH_TO_FILE);
