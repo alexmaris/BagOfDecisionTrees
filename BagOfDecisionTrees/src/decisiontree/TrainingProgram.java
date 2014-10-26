@@ -71,12 +71,13 @@ public class TrainingProgram {
 		int dataForTraining = rawTrainingData.size()
 				- (rawTrainingData.size() / 66);
 		int dataForTesting = rawTrainingData.size() - dataForTraining;
-		int dataSplitFactor = 100;
+		int dataSplitFactor = 50;
 		int dataSplit = dataForTraining / dataSplitFactor;
 
 		for (int i = 0; i < dataSplitFactor; i++) {
 			if ((i % 5) == 0) {
-				log.info("Creating trees for data split " + i);
+				log.info("Creating trees for data split " + i + "% complete ("
+						+ bagOfTrees.count() + " trees built)");
 			}
 			int fromItem = i * dataSplit;
 			// In case of odd numbers, make sure we catch the last record
@@ -90,26 +91,33 @@ public class TrainingProgram {
 			trainTrees(tempInstances, 5);
 
 			// TODO: temporary stop while testing...
-			//if (i == 2)
-			//	break;
+			/*if (i == 0)
+				break;*/
 		}
 
 		// Print confusion matrix for the data set aside for testing
-		generateConfussionMatrix(parseStringToInstance(rawTrainingData.subList(
-				dataForTesting, rawTrainingData.size())));
+		generateConfussionMatrix(rawTrainingData.subList(dataForTesting,
+				rawTrainingData.size()));
 	}
 
 	/**
 	 * Generate a confusion matrix from the list of Instance(s)
 	 */
-	private void generateConfussionMatrix(List<Instance> instanceList) {
+	private void generateConfussionMatrix(List<String> instanceData) {
 		log.debug("Generating confussion matrix");
 
 		// Map of instance classifications and their respective guessed
 		// classifications
 		HashMap<String, HashMap<String, Integer>> confusionMatrix = new HashMap<String, HashMap<String, Integer>>();
 
-		for (Instance instance : instanceList) {
+		int reportSplitsize = instanceData.size() / 5;
+		for (int i = 0; i < instanceData.size(); i++) {
+			if ((i%reportSplitsize) == 0) {
+				log.info("Classifying testing data " + ((double)i/instanceData.size()*100) + "% complete ("
+						+ bagOfTrees.count() + " trees built)");
+			}
+
+			Instance instance = parseStringToInstance(instanceData.get(i));
 			String guess = bagOfTrees.classifyByVote(instance);
 			String classifier = instance.classifier();
 
@@ -172,6 +180,16 @@ public class TrainingProgram {
 		return tempData;
 	}
 
+	private Instance parseStringToInstance(String string) {
+		// parse data record
+		RecordParser parser = new RecordParser(string);
+
+		// add the instance attribute names and values
+		return new Instance(attributeNames, parser.values(),
+				parser.classifier());
+
+	}
+
 	/**
 	 * Train trees from random attributes
 	 */
@@ -183,6 +201,8 @@ public class TrainingProgram {
 			int trainingSize = instanceList.size() - (instanceList.size() / 66);
 			Instances instances = new Instances(instanceList.subList(0,
 					trainingSize - 1));
+
+			log.debug("Training tree on " + trainingSize + " data rows.");
 
 			// Instantiate new TreeTrainer using the loaded instances
 			TreeTrainer treeTrainer = new TreeTrainer(instances);
@@ -275,7 +295,7 @@ public class TrainingProgram {
 		long t = System.currentTimeMillis();
 
 		// testBagOfTrees();
-		String PATH_TO_FILE = "data/kddcup.data_2_percent.txt"; // kddcup.data_10_percent.txt
+		String PATH_TO_FILE = "data/kddcup.data.txt"; // kddcup.data_10_percent.txt
 		String PATH_TO_SERIALIZED_BOT = "data/kddcup.trees";
 		TrainingProgram trainingProgram = new TrainingProgram();
 		trainingProgram.Run(PATH_TO_FILE);
