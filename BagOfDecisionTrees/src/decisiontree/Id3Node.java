@@ -219,7 +219,7 @@ public class Id3Node extends Node implements Serializable {
 				clearInstances(((Id3Node) child));
 			}
 		}
-		n.instances = null;
+		n.instances.clearInstancesData();
 		return;
 
 	}

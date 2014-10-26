@@ -441,6 +441,10 @@ public class Instances implements Serializable {
         return merged;
     }
     
+    public void clearInstancesData(){
+    	this.instances.clear();
+    }
+    
     /**
      * Load the data set records and create all instances
      * @param f 

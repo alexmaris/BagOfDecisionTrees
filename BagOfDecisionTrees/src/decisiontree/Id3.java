@@ -578,7 +578,8 @@ public class Id3 implements Serializable {
 		//this.instances = null;
 		this.testInstance = null;
 		this.testInstances = null;
-		//removeAllInstances();
+		this.instances.clearInstancesData();
+		removeAllInstances();
 	}
 
 	public void removeAllInstances() {

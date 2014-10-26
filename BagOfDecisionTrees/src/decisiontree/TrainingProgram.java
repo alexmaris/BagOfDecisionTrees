@@ -62,43 +62,38 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Break up raw training data into small chunks and train trees off of those
-	 * chunks
+	 * Break up raw training data into small chunks and train trees off of those chunks
 	 */
 	private void trainTreesOnDataSplits() {
 		// Break up the raw training data into small pieces that trees will be
 		// trained from
-		int dataForTraining = rawTrainingData.size()
-				- (rawTrainingData.size() / 66);
+		int dataForTraining = rawTrainingData.size() - (rawTrainingData.size() / 66);
 		int dataForTesting = rawTrainingData.size() - dataForTraining;
-		int dataSplitFactor = 50;
+		int dataSplitFactor = 200;
 		int dataSplit = dataForTraining / dataSplitFactor;
 
 		for (int i = 0; i < dataSplitFactor; i++) {
 			if ((i % 5) == 0) {
-				log.info("Creating trees for data split " + i + "% complete ("
-						+ bagOfTrees.count() + " trees built)");
+				log.info("Creating trees for data split " + i + "% complete (" + bagOfTrees.count()
+						+ " trees built)");
 			}
 			int fromItem = i * dataSplit;
 			// In case of odd numbers, make sure we catch the last record
-			int toItem = (i == dataSplitFactor - 1) ? dataForTraining
-					: fromItem + dataSplit;
+			int toItem = (i == dataSplitFactor - 1) ? dataForTraining : fromItem + dataSplit;
 
-			List<Instance> tempInstances = parseStringToInstance(rawTrainingData
-					.subList(fromItem, toItem));
+			List<Instance> tempInstances = parseStringToInstance(rawTrainingData.subList(fromItem, toItem));
 
 			// Train trees for this sub-split of data
 			trainTrees(tempInstances, 5);
 
 			// TODO: temporary stop while testing...
-			/*
-			 * if (i == 0) break;
-			 */
+			if (i == 10)
+				break;
+
 		}
 
 		// Print confusion matrix for the data set aside for testing
-		generateConfussionMatrix(rawTrainingData.subList(dataForTesting,
-				rawTrainingData.size()));
+		generateConfussionMatrix(rawTrainingData.subList(dataForTesting, rawTrainingData.size()));
 	}
 
 	/**
@@ -114,9 +109,8 @@ public class TrainingProgram {
 		int reportSplitsize = instanceData.size() / 5;
 		for (int i = 0; i < instanceData.size(); i++) {
 			if ((i % reportSplitsize) == 0) {
-				log.info("Classifying testing data "
-						+ ((double) i / instanceData.size() * 100)
-						+ "% complete (" + bagOfTrees.count() + " trees built)");
+				log.info("Classifying testing data " + (int)((double) i / instanceData.size() * 100)
+						+ "% complete");
 			}
 
 			Instance instance = parseStringToInstance(instanceData.get(i));
@@ -128,8 +122,7 @@ public class TrainingProgram {
 
 				// Add classification if not currently in the collection
 				if (!confusionMatrix.containsKey(classifier)) {
-					confusionMatrix.put(classifier,
-							new HashMap<String, Integer>());
+					confusionMatrix.put(classifier, new HashMap<String, Integer>());
 				}
 
 				// Add guessed classification if not currently in the collection
@@ -138,8 +131,7 @@ public class TrainingProgram {
 				}
 
 				// Increase the count of the guessed classification
-				confusionMatrix.get(classifier).put(guess,
-						confusionMatrix.get(classifier).get(guess) + 1);
+				confusionMatrix.get(classifier).put(guess, confusionMatrix.get(classifier).get(guess) + 1);
 			}
 		}
 
@@ -156,9 +148,8 @@ public class TrainingProgram {
 			// Walk over all the possible classifications and show the guessed
 			// value if a guess was made
 			for (String s : confusionMatrix.keySet()) {
-				String value = (confusionMatrix.get(classification)
-						.containsKey(s)) ? confusionMatrix.get(classification)
-						.get(s).toString() : "";
+				String value = (confusionMatrix.get(classification).containsKey(s)) ? confusionMatrix
+						.get(classification).get(s).toString() : "";
 				System.out.format(" %15s |", value);
 			}
 			System.out.print("\n");
@@ -176,8 +167,7 @@ public class TrainingProgram {
 			parser = new RecordParser(s);
 
 			// add the instance attribute names and values
-			tempData.add(new Instance(attributeNames, parser.values(), parser
-					.classifier()));
+			tempData.add(new Instance(attributeNames, parser.values(), parser.classifier()));
 		}
 		return tempData;
 	}
@@ -187,8 +177,7 @@ public class TrainingProgram {
 		RecordParser parser = new RecordParser(string);
 
 		// add the instance attribute names and values
-		return new Instance(attributeNames, parser.values(),
-				parser.classifier());
+		return new Instance(attributeNames, parser.values(), parser.classifier());
 
 	}
 
@@ -201,8 +190,7 @@ public class TrainingProgram {
 		for (int i = 0; i < treeCount; i++) {
 			// Take 66% of the instances at random and train a tree from them
 			int trainingSize = instanceList.size() - (instanceList.size() / 66);
-			Instances instances = new Instances(instanceList.subList(0,
-					trainingSize - 1));
+			Instances instances = new Instances(instanceList.subList(0, trainingSize - 1));
 
 			log.debug("Training tree on " + trainingSize + " data rows.");
 
@@ -214,8 +202,7 @@ public class TrainingProgram {
 
 			// Test the tree's mis-classification rate across the unused 33% of
 			// instances
-			testTree(trees[i],
-					instanceList.subList(trainingSize, instanceList.size()));
+			testTree(trees[i], instanceList.subList(trainingSize, instanceList.size()));
 		}
 
 		// Add to the bag the randomly trained trees
@@ -223,8 +210,7 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Test a tree given a list of Instance objects, and keep track of the
-	 * missclassification counts
+	 * Test a tree given a list of Instance objects, and keep track of the missclassification counts
 	 */
 	private void testTree(Id3 tree, List<Instance> instanceList) {
 		for (Instance instance : instanceList) {
@@ -236,8 +222,8 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Given a file name, load the data in the rawTrainingData list, then call
-	 * randomizeData() to split it up into training and testing lists
+	 * Given a file name, load the data in the rawTrainingData list, then call randomizeData() to split it up into
+	 * training and testing lists
 	 */
 	public void loadData(String path_to_file) {
 
@@ -284,8 +270,8 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Randomize all data that was loaded into the training program and add 33%
-	 * of it to the testing data set and retain 66% in the training data set
+	 * Randomize all data that was loaded into the training program and add 33% of it to the testing data set and
+	 * retain 66% in the training data set
 	 */
 	public void randomizeData() {
 		Collections.shuffle(rawTrainingData);
@@ -305,56 +291,12 @@ public class TrainingProgram {
 		int count = trainingProgram.getBagOfTreesSize();
 
 		System.out.println("TreeBagCount: " + count);
-		System.out.println("Out of bag error rate: "
-				+ trainingProgram.totalMisClassifications + " / "
+		System.out.println("Out of bag error rate: " + trainingProgram.totalMisClassifications + " / "
 				+ trainingProgram.totalClassifications);
 
 		System.out.println("Saving forest to file...");
 		trainingProgram.Save(PATH_TO_SERIALIZED_BOT);
 
-		System.out
-				.println("Runtime: "
-						+ (((System.currentTimeMillis() - t) / 1000) / 60)
-						+ " minutes");
-	}
-
-	/**
-	 * Quick test to make sure a tree can be serialized/de-serialized
-	 */
-	public static void testBagOfTrees() {
-
-		String PATH_TO_FILE = "data/kddcup.data.txt"; // kddcup.data_xsm.txt
-		// //iris.data
-		// //kddcup.data_2_percent.txt
-
-		// Create some test instances that we can try and classify
-		String[] names = { "#duration", "@protocol_type", "@service", "@flag",
-				"#src_bytes", "#dst_bytes", "@land", "#wrong_fragment",
-				"#urgent", "#hot", "#num_failed_logins", "@logged_in",
-				"#num_compromised", "#root_shell", "#su_attempted",
-				"#num_root", "#num_file_creations", "#num_shells",
-				"#num_access_files", "#num_outbound_cmds", "@is_host_login",
-				"@is_guest_login", "#count", "#srv_count", "#serror_rate",
-				"#srv_serror_rate", "#rerror_rate", "#srv_rerror_rate",
-				"#same_srv_rate", "#diff_srv_rate", "#srv_diff_host_rate",
-				"#dst_host_count", "#dst_host_srv_count",
-				"#dst_host_same_srv_rate", "#dst_host_diff_srv_rate",
-				"#dst_host_same_src_port_rate", "#dst_host_srv_diff_host_rate",
-				"#dst_host_serror_rate", "#dst_host_srv_serror_rate",
-				"#dst_host_rerror_rate", "#dst_host_srv_rerror_rate" };
-
-		String[] valuesSmurf = { "0", "icmp", "ecr_i", "SF", "1032", "0", "0",
-				"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0",
-				"0", "0", "0", "511", "511", "0.00", "0.00", "0.00", "0.00",
-				"1.00", "0.00", "0.00", "255", "255", "1.00", "0.00", "1.00",
-				"0.00", "0.00", "0.00", "0.00", "0.00" };
-		String[] valuesNormal = { "0", "tcp", "http", "SF", "336", "3841", "0",
-				"0", "0", "0", "0", "1", "0", "0", "0", "0", "0", "0", "0",
-				"0", "0", "0", "7", "11", "0.00", "0.00", "0.00", "0.00",
-				"1.00", "0.00", "0.27", "33", "255", "1.00", "0.00", "0.03",
-				"0.07", "0.00", "0.00", "0.00", "0.00" };
-
-		Instance instanceToClasify = new Instance(names, valuesSmurf, null);
-		Instance instanceToClasify2 = new Instance(names, valuesNormal, null);
+		System.out.println("Runtime: " + (((System.currentTimeMillis() - t) / 1000) / 60) + " minutes");
 	}
 }
