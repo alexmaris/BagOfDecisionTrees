@@ -3,6 +3,7 @@ package decisiontree;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -12,17 +13,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class ClassificationProgram {
-	private static final Log log = LogFactory.getLog(ClassificationProgram.class);
+	private static final Log log = LogFactory
+			.getLog(ClassificationProgram.class);
 
 	private BagOfTrees botIn;
 	private String[] featureNames;
 	private List<String> rawData;
 	private List<String> classifiedData;
+	private String outputFilePath;
 
 	public ClassificationProgram(String dataInputFile, String dataOtuputFile,
 			String treeBagFile) {
+		log.info("Reading bag of trees from file");
 		botIn = new BagOfTrees();
 		botIn.readBagFromFile(treeBagFile);
+
+		log.info("Tree bag contains " + botIn.count() + " trees");
+
+		outputFilePath = dataOtuputFile;
 
 		rawData = loadDataFromFile(dataInputFile);
 	}
@@ -71,25 +79,52 @@ public class ClassificationProgram {
 		Instance instance;
 		String guessedClassification;
 
-		for (String dataRow : rawData) {
-			parser = new RecordParser(dataRow);
+		int reportSize = rawData.size() / 10;
+
+		for (int i = 0; i < rawData.size(); i++) {
+			if ((i % reportSize) == 0) {
+				log.info("Classifying data "
+						+ (int) ((double) i / rawData.size() * 100)
+						+ "% complete");
+			}
+
+			// Parse the row from the raw data, adding a comma where the
+			// classification would normally go
+			parser = new RecordParser(rawData.get(i) + ", ");
 
 			instance = new Instance(featureNames, parser.values(),
 					parser.classifier());
 
 			guessedClassification = botIn.classifyByVote(instance);
-			classifiedData.add(instance.toString() + ","
-					+ guessedClassification);
-			
-			System.out.println(guessedClassification);
+
+			// Add classified instance to the tree
+			classifiedData.add(instance.toString() + guessedClassification);
 		}
+	}
+
+	public void saveClassifiedData() {
+		log.info("Saving classified data out to file: " + outputFilePath);
+
+		FileWriter writer;
+		try {
+			writer = new FileWriter(outputFilePath);
+
+			for (String str : classifiedData) {
+				writer.write(String.format("%s%n", str));
+			}
+			writer.close();
+		} catch (IOException e) {
+			log.error("IOException issued");
+			e.printStackTrace();
+		}
+
 	}
 
 	public static void main(String[] args) {
 
-		String inputFile = "kddcup.testdata.unlabeled_10_percent.txt";
-		String otuputFile = "classified_data.txt";
-		String treeFile = "data/kddcup1.trees";
+		String inputFile = "data/kddcup.testdata.unlabeled_10_percent.txt";
+		String otuputFile = "data/classified_data.txt";
+		String treeFile = "data/kddcup.trees";
 
 		// Create some test instances that we can try and classify
 		String[] names = { "#duration", "@protocol_type", "@service", "@flag",
@@ -106,27 +141,35 @@ public class ClassificationProgram {
 				"#dst_host_same_src_port_rate", "#dst_host_srv_diff_host_rate",
 				"#dst_host_serror_rate", "#dst_host_srv_serror_rate",
 				"#dst_host_rerror_rate", "#dst_host_srv_rerror_rate" };
-		
-		ClassificationProgram classifier = new ClassificationProgram(inputFile, otuputFile, treeFile);
-		
 
-/*		String[] valuesSmurf = { "0", "icmp", "ecr_i", "SF", "1032", "0", "0",
-				"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0",
-				"0", "0", "0", "511", "511", "0.00", "0.00", "0.00", "0.00",
-				"1.00", "0.00", "0.00", "255", "255", "1.00", "0.00", "1.00",
-				"0.00", "0.00", "0.00", "0.00", "0.00" };
-		String[] valuesNormal = { "0", "tcp", "http", "SF", "336", "3841", "0",
-				"0", "0", "0", "0", "1", "0", "0", "0", "0", "0", "0", "0",
-				"0", "0", "0", "7", "11", "0.00", "0.00", "0.00", "0.00",
-				"1.00", "0.00", "0.27", "33", "255", "1.00", "0.00", "0.03",
-				"0.07", "0.00", "0.00", "0.00", "0.00" };
+		ClassificationProgram classifier = new ClassificationProgram(inputFile,
+				otuputFile, treeFile);
 
-		Instance instanceToClasify = new Instance(names, valuesSmurf, null);
-		Instance instanceToClasify2 = new Instance(names, valuesNormal, null);
+		classifier.setfeatureNames(names);
+		classifier.classifyData();
+		classifier.saveClassifiedData();
 
-		// Pull out one of the trees from the bag and try to classify our test
-		// records
-		System.out.println(botIn.classifyByVote(instanceToClasify));
-		System.out.println(botIn.classifyByVote(instanceToClasify2));*/
+		System.out.println("END program.");
+
+		/*
+		 * String[] valuesSmurf = { "0", "icmp", "ecr_i", "SF", "1032", "0",
+		 * "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0",
+		 * "0", "0", "511", "511", "0.00", "0.00", "0.00", "0.00", "1.00",
+		 * "0.00", "0.00", "255", "255", "1.00", "0.00", "1.00", "0.00", "0.00",
+		 * "0.00", "0.00", "0.00" }; String[] valuesNormal = { "0", "tcp",
+		 * "http", "SF", "336", "3841", "0", "0", "0", "0", "0", "1", "0", "0",
+		 * "0", "0", "0", "0", "0", "0", "0", "0", "7", "11", "0.00", "0.00",
+		 * "0.00", "0.00", "1.00", "0.00", "0.27", "33", "255", "1.00", "0.00",
+		 * "0.03", "0.07", "0.00", "0.00", "0.00", "0.00" };
+		 * 
+		 * Instance instanceToClasify = new Instance(names, valuesSmurf, null);
+		 * Instance instanceToClasify2 = new Instance(names, valuesNormal,
+		 * null);
+		 * 
+		 * // Pull out one of the trees from the bag and try to classify our
+		 * test // records
+		 * System.out.println(botIn.classifyByVote(instanceToClasify));
+		 * System.out.println(botIn.classifyByVote(instanceToClasify2));
+		 */
 	}
 }
