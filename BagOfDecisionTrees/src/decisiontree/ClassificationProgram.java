@@ -122,7 +122,7 @@ public class ClassificationProgram {
 
 	public static void main(String[] args) {
 
-		String inputFile = "data/kddcup.testdata.unlabeled_10_percent.txt";
+		String inputFile = "data/kddcup.testdata.unlabeled.txt";
 		String otuputFile = "data/classified_data.txt";
 		String treeFile = "data/kddcup.trees";
 
