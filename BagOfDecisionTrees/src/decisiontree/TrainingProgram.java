@@ -71,7 +71,7 @@ public class TrainingProgram {
 		int dataForTesting = rawTrainingData.size() - dataForTraining;
 		int dataSplitFactor = 20;
 		int dataSplit = dataForTraining / dataSplitFactor;
-		int numberOfTreesEachSplit = 10;
+		int numberOfTreesEachSplit = 16;
 
 		int reportSplitsize = dataSplitFactor / 5;
 
@@ -90,7 +90,7 @@ public class TrainingProgram {
 			trainTrees(tempInstances, numberOfTreesEachSplit);
 
 			// TODO: temporary stop while testing...
-			  //if (i == 1) break;
+			  //if (i == 3) break;
 			 
 		}
 
@@ -288,7 +288,7 @@ public class TrainingProgram {
 		long t = System.currentTimeMillis();
 
 		// testBagOfTrees();
-		String PATH_TO_FILE = "data/kddcup.data_2_percent.txt"; // kddcup.data_10_percent.txt
+		String PATH_TO_FILE = "data/kddcup.data_10_percent.txt"; // kddcup.data_10_percent.txt
 		String PATH_TO_SERIALIZED_BOT = "data/kddcup.trees";
 		TrainingProgram trainingProgram = new TrainingProgram();
 		trainingProgram.Run(PATH_TO_FILE);
