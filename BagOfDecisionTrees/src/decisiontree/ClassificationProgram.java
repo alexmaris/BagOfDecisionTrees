@@ -1,12 +1,95 @@
 package decisiontree;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 public class ClassificationProgram {
+	private static final Log log = LogFactory.getLog(ClassificationProgram.class);
+
+	private BagOfTrees botIn;
+	private String[] featureNames;
+	private List<String> rawData;
+	private List<String> classifiedData;
+
+	public ClassificationProgram(String dataInputFile, String dataOtuputFile,
+			String treeBagFile) {
+		botIn = new BagOfTrees();
+		botIn.readBagFromFile(treeBagFile);
+
+		rawData = loadDataFromFile(dataInputFile);
+	}
+
+	public void setfeatureNames(String[] names) {
+		this.featureNames = names;
+	}
+
+	private List<String> loadDataFromFile(String path_to_file) {
+		List<String> list = new ArrayList<String>();
+
+		log.info("Loading testing data set");
+		String fileRow;
+		FileInputStream fis = null;
+		BufferedReader reader = null;
+		try {
+			fis = new FileInputStream(path_to_file);
+			reader = new BufferedReader(new InputStreamReader(fis));
+
+			// parse records
+			while ((fileRow = reader.readLine()) != null) {
+				list.add(fileRow);
+			}
+		} catch (FileNotFoundException e) {
+			System.out.println("FileNotFoundException issued");
+		} catch (IOException e) {
+			System.out.println("IOException issued");
+		} finally {
+			try {
+				if (reader != null)
+					reader.close();
+				if (fis != null)
+					fis.close();
+			} catch (IOException e) {
+				System.out.println("IOException when closing file");
+			}
+		}
+
+		log.debug("Loaded " + list.size() + " records");
+		return list;
+	}
+
+	public void classifyData() {
+		classifiedData = new ArrayList<String>(rawData.size());
+		RecordParser parser;
+		Instance instance;
+		String guessedClassification;
+
+		for (String dataRow : rawData) {
+			parser = new RecordParser(dataRow);
+
+			instance = new Instance(featureNames, parser.values(),
+					parser.classifier());
+
+			guessedClassification = botIn.classifyByVote(instance);
+			classifiedData.add(instance.toString() + ","
+					+ guessedClassification);
+			
+			System.out.println(guessedClassification);
+		}
+	}
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 
-		BagOfTrees botIn = new BagOfTrees();
-		botIn.readBagFromFile("data/test.txt");
+		String inputFile = "kddcup.testdata.unlabeled_10_percent.txt";
+		String otuputFile = "classified_data.txt";
+		String treeFile = "data/kddcup.trees";
 
 		// Create some test instances that we can try and classify
 		String[] names = { "#duration", "@protocol_type", "@service", "@flag",
@@ -23,8 +106,11 @@ public class ClassificationProgram {
 				"#dst_host_same_src_port_rate", "#dst_host_srv_diff_host_rate",
 				"#dst_host_serror_rate", "#dst_host_srv_serror_rate",
 				"#dst_host_rerror_rate", "#dst_host_srv_rerror_rate" };
+		
+		ClassificationProgram classifier = new ClassificationProgram(inputFile, otuputFile, treeFile);
+		
 
-		String[] valuesSmurf = { "0", "icmp", "ecr_i", "SF", "1032", "0", "0",
+/*		String[] valuesSmurf = { "0", "icmp", "ecr_i", "SF", "1032", "0", "0",
 				"0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0",
 				"0", "0", "0", "511", "511", "0.00", "0.00", "0.00", "0.00",
 				"1.00", "0.00", "0.00", "255", "255", "1.00", "0.00", "1.00",
@@ -41,6 +127,6 @@ public class ClassificationProgram {
 		// Pull out one of the trees from the bag and try to classify our test
 		// records
 		System.out.println(botIn.classifyByVote(instanceToClasify));
-		System.out.println(botIn.classifyByVote(instanceToClasify2));
+		System.out.println(botIn.classifyByVote(instanceToClasify2));*/
 	}
 }
