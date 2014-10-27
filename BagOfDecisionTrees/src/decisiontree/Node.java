@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Node implements Serializable{
+	private static final long serialVersionUID = 8142468351370017145L;
 	private ArrayList<Node> children;
 	private Node parent;
 	private boolean binary;

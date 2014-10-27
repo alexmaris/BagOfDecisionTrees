@@ -14,6 +14,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class Id3 implements Serializable {
+	private static final long serialVersionUID = -781699850100065981L;
+
 	private static final Log log = LogFactory.getLog(Id3.class);
 
 	// compute log(2) constant to help performance

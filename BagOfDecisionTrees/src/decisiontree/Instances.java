@@ -23,7 +23,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class Instances implements Serializable {
-    private static final Log log = LogFactory.getLog(Instances.class);
+	private static final long serialVersionUID = 5353526000976388264L;
+	private static final Log log = LogFactory.getLog(Instances.class);
     // attributes derived from instances
     private Map<String, Attribute> attributes;
     // classifiers derived from instances

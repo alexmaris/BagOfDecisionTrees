@@ -69,9 +69,9 @@ public class TrainingProgram {
 		// trained from
 		int dataForTraining = rawTrainingData.size() - (rawTrainingData.size() / 66);
 		int dataForTesting = rawTrainingData.size() - dataForTraining;
-		int dataSplitFactor = 10;
+		int dataSplitFactor = 20;
 		int dataSplit = dataForTraining / dataSplitFactor;
-		int numberOfTreesEachSplit = 24;
+		int numberOfTreesEachSplit = 10;
 
 		int reportSplitsize = dataSplitFactor / 5;
 
@@ -90,10 +90,8 @@ public class TrainingProgram {
 			trainTrees(tempInstances, numberOfTreesEachSplit);
 
 			// TODO: temporary stop while testing...
-			/*
-			 * if (i == 10) break;
-			 */
-
+			  //if (i == 1) break;
+			 
 		}
 
 		// Print confusion matrix for the data set aside for testing

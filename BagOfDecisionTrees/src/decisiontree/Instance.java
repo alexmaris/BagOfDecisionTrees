@@ -8,7 +8,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class Instance implements Serializable {
-    private static final Log log = LogFactory.getLog(Instance.class);
+	private static final long serialVersionUID = -8126937682550625335L;
+	private static final Log log = LogFactory.getLog(Instance.class);
     private Map<String, String> values;
     private Map<String, Double> valuesDouble;
     private String classifier;

@@ -89,7 +89,7 @@ public class ClassificationProgram {
 
 		String inputFile = "kddcup.testdata.unlabeled_10_percent.txt";
 		String otuputFile = "classified_data.txt";
-		String treeFile = "data/kddcup.trees";
+		String treeFile = "data/kddcup1.trees";
 
 		// Create some test instances that we can try and classify
 		String[] names = { "#duration", "@protocol_type", "@service", "@flag",
