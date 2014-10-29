@@ -44,12 +44,12 @@ public class TrainingProgram {
 	/**
 	 * Load data, randomize it, and train trees
 	 */
-	public void Run(String path_to_file) {
+	public void Run(String path_to_file, int dataSplit, int treeCount) {
 		bagOfTrees = new BagOfTrees();
 
 		loadData(path_to_file);
 
-		trainTreesOnDataSplits();
+		trainTreesOnDataSplits(dataSplit, treeCount);
 	}
 
 	/**
@@ -62,56 +62,69 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Break up raw training data into small chunks and train trees off of those chunks
+	 * Break up raw training data into small chunks and train trees off of those
+	 * chunks
 	 */
-	private void trainTreesOnDataSplits() {
+	private void trainTreesOnDataSplits(int dataSplitFactor,
+			int numberOfTreesEachSplit) {
+
 		// Break up the raw training data into small pieces that trees will be
 		// trained from
-		int dataForTraining = rawTrainingData.size() - (rawTrainingData.size() / 66);
+		int dataForTraining = rawTrainingData.size()
+				- (rawTrainingData.size() / 50);
 		int dataForTesting = rawTrainingData.size() - dataForTraining;
-		int dataSplitFactor = 20;
 		int dataSplit = dataForTraining / dataSplitFactor;
-		int numberOfTreesEachSplit = 16;
 
-		int reportSplitsize = dataSplitFactor / 5;
+		double reportSplitsize = dataSplitFactor / 5;
 
 		for (int i = 0; i < dataSplitFactor; i++) {
 			if ((i % reportSplitsize) == 0) {
-				log.info("Creating trees for data split " + (int) ((double) i / dataSplitFactor * 100)
+				log.info("Creating trees for data split "
+						+ (int) ((double) i / dataSplitFactor * 100)
 						+ "% complete (" + bagOfTrees.count() + " trees built)");
 			}
 			int fromItem = i * dataSplit;
 			// In case of odd numbers, make sure we catch the last record
-			int toItem = (i == dataSplitFactor - 1) ? dataForTraining : fromItem + dataSplit;
+			int toItem = (i == dataSplitFactor - 1) ? dataForTraining
+					: fromItem + dataSplit;
 
-			List<Instance> tempInstances = parseStringToInstance(rawTrainingData.subList(fromItem, toItem));
+			List<Instance> tempInstances = parseStringToInstance(rawTrainingData
+					.subList(fromItem, toItem));
 
 			// Train trees for this sub-split of data
 			trainTrees(tempInstances, numberOfTreesEachSplit);
 
 			// TODO: temporary stop while testing...
-			  //if (i == 3) break;
-			 
+			// if (i == 3) break;
+
 		}
 
+		ArrayList<String> rawTestingData = new ArrayList<String>(
+				rawTrainingData.subList(0, dataForTraining));
+
+		// Clear out the data that was used for training
+		rawTrainingData.clear();
+
 		// Print confusion matrix for the data set aside for testing
-		generateConfussionMatrix(rawTrainingData.subList(dataForTesting, rawTrainingData.size()));
+		generateConfussionMatrix(rawTestingData);
 	}
 
 	/**
 	 * Generate a confusion matrix from the list of Instance(s)
 	 */
 	private void generateConfussionMatrix(List<String> instanceData) {
-		log.debug("Generating confussion matrix");
+		log.debug("Generating confussion matrix (" + instanceData.size()
+				+ " records)");
 
 		// Map of instance classifications and their respective guessed
 		// classifications
 		HashMap<String, HashMap<String, Integer>> confusionMatrix = new HashMap<String, HashMap<String, Integer>>();
 
-		int reportSplitsize = instanceData.size() / 5;
+		int reportSplitsize = instanceData.size() / 100;
 		for (int i = 0; i < instanceData.size(); i++) {
 			if ((i % reportSplitsize) == 0) {
-				log.info("Classifying testing data " + (int) ((double) i / instanceData.size() * 100)
+				log.info("Classifying testing data "
+						+ (int) ((double) i / instanceData.size() * 100)
 						+ "% complete");
 			}
 
@@ -124,7 +137,8 @@ public class TrainingProgram {
 
 				// Add classification if not currently in the collection
 				if (!confusionMatrix.containsKey(classifier)) {
-					confusionMatrix.put(classifier, new HashMap<String, Integer>());
+					confusionMatrix.put(classifier,
+							new HashMap<String, Integer>());
 				}
 
 				// Add guessed classification if not currently in the collection
@@ -133,7 +147,8 @@ public class TrainingProgram {
 				}
 
 				// Increase the count of the guessed classification
-				confusionMatrix.get(classifier).put(guess, confusionMatrix.get(classifier).get(guess) + 1);
+				confusionMatrix.get(classifier).put(guess,
+						confusionMatrix.get(classifier).get(guess) + 1);
 			}
 		}
 
@@ -150,8 +165,9 @@ public class TrainingProgram {
 			// Walk over all the possible classifications and show the guessed
 			// value if a guess was made
 			for (String s : confusionMatrix.keySet()) {
-				String value = (confusionMatrix.get(classification).containsKey(s)) ? confusionMatrix
-						.get(classification).get(s).toString() : "";
+				String value = (confusionMatrix.get(classification)
+						.containsKey(s)) ? confusionMatrix.get(classification)
+						.get(s).toString() : "";
 				System.out.format(" %15s |", value);
 			}
 			System.out.print("\n");
@@ -169,7 +185,8 @@ public class TrainingProgram {
 			parser = new RecordParser(s);
 
 			// add the instance attribute names and values
-			tempData.add(new Instance(attributeNames, parser.values(), parser.classifier()));
+			tempData.add(new Instance(attributeNames, parser.values(), parser
+					.classifier()));
 		}
 		return tempData;
 	}
@@ -179,7 +196,8 @@ public class TrainingProgram {
 		RecordParser parser = new RecordParser(string);
 
 		// add the instance attribute names and values
-		return new Instance(attributeNames, parser.values(), parser.classifier());
+		return new Instance(attributeNames, parser.values(),
+				parser.classifier());
 
 	}
 
@@ -188,14 +206,15 @@ public class TrainingProgram {
 	 */
 	private void trainTrees(List<Instance> instanceList, int treeCount) {
 		Id3[] trees = new Id3[treeCount];
-		// Take 66% of the instances at random and train a tree from them
-		int trainingSize = instanceList.size() - (instanceList.size() / 66);
-		
+		// Take 70% of the instances at random and train a tree from them
+		int trainingSize = instanceList.size() - (instanceList.size() / 70);
+
 		log.debug("Training trees on " + trainingSize + " data rows.");
-		
+
 		for (int i = 0; i < treeCount; i++) {
 
-			Instances instances = new Instances(instanceList.subList(0, trainingSize - 1));
+			Instances instances = new Instances(instanceList.subList(0,
+					trainingSize - 1));
 
 			// Instantiate new TreeTrainer using the loaded instances
 			TreeTrainer treeTrainer = new TreeTrainer(instances);
@@ -203,10 +222,11 @@ public class TrainingProgram {
 			// Add the tree to the trees array
 			trees[i] = treeTrainer.getTreeTrainedFromRandomAttributes();
 
-			// Test the tree's mis-classification rate across the unused 33% of
+			// Test the tree's mis-classification rate across the unused 30% of
 			// instances
-			testTree(trees[i], instanceList.subList(trainingSize, instanceList.size()));
-			
+			testTree(trees[i],
+					instanceList.subList(trainingSize, instanceList.size()));
+
 			Collections.shuffle(instanceList);
 		}
 
@@ -215,7 +235,8 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Test a tree given a list of Instance objects, and keep track of the missclassification counts
+	 * Test a tree given a list of Instance objects, and keep track of the
+	 * missclassification counts
 	 */
 	private void testTree(Id3 tree, List<Instance> instanceList) {
 		for (Instance instance : instanceList) {
@@ -227,8 +248,8 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Given a file name, load the data in the rawTrainingData list, then call randomizeData() to split it up into
-	 * training and testing lists
+	 * Given a file name, load the data in the rawTrainingData list, then call
+	 * randomizeData() to split it up into training and testing lists
 	 */
 	public void loadData(String path_to_file) {
 
@@ -275,8 +296,8 @@ public class TrainingProgram {
 	}
 
 	/**
-	 * Randomize all data that was loaded into the training program and add 33% of it to the testing data set and
-	 * retain 66% in the training data set
+	 * Randomize all data that was loaded into the training program and add 33%
+	 * of it to the testing data set and retain 66% in the training data set
 	 */
 	public void randomizeData() {
 		Collections.shuffle(rawTrainingData);
@@ -288,20 +309,24 @@ public class TrainingProgram {
 		long t = System.currentTimeMillis();
 
 		// testBagOfTrees();
-		String PATH_TO_FILE = "data/kddcup.data_10_percent.txt"; // kddcup.data_10_percent.txt
+		String PATH_TO_FILE = "data/kddcup.data.txt"; // kddcup.data_10_percent.txt
 		String PATH_TO_SERIALIZED_BOT = "data/kddcup.trees";
 		TrainingProgram trainingProgram = new TrainingProgram();
-		trainingProgram.Run(PATH_TO_FILE);
+		trainingProgram.Run(PATH_TO_FILE, 200, 30);
 
 		int count = trainingProgram.getBagOfTreesSize();
 
 		System.out.println("TreeBagCount: " + count);
-		System.out.println("Out of bag error rate: " + trainingProgram.totalMisClassifications + " / "
+		System.out.println("Out of bag error rate: "
+				+ trainingProgram.totalMisClassifications + " / "
 				+ trainingProgram.totalClassifications);
 
 		System.out.println("Saving forest to file...");
 		trainingProgram.Save(PATH_TO_SERIALIZED_BOT);
 
-		System.out.println("Runtime: " + (((System.currentTimeMillis() - t) / 1000) / 60) + " minutes");
+		System.out
+				.println("Runtime: "
+						+ (((System.currentTimeMillis() - t) / 1000) / 60)
+						+ " minutes");
 	}
 }

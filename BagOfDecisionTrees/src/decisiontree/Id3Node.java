@@ -6,14 +6,18 @@ import java.util.List;
 
 public class Id3Node extends Node implements Serializable {
 	private static final long serialVersionUID = 2385446682051338699L;
-	private List<String> attributesTested;
-	private Instances instances;
+	// variables required for training
+	private transient List<String> attributesTested;
+	private transient Instances instances;
+	private transient double entropy;
+	private transient double purity;
+	// variables required for classification
 	private String classifier;
 	private String attribute;
+	private boolean discrete;
 	private double split;
 	private String value;
-	private double purity;
-	private double entropy;
+	private String fill;
 
 	/**
 	 * Constructor for root node
@@ -91,23 +95,32 @@ public class Id3Node extends Node implements Serializable {
 	}
 
 	/**
-	 * Getter method for whether the attribute on this node contains continuous
-	 * ranged values
+	 * Getter method for fill value
 	 * 
 	 * @return
 	 */
-	public boolean isContinuous() {
-		return Instance.isContinuous(attribute);
+	public String fill() {
+		return fill;
 	}
 
 	/**
 	 * Getter method for whether the attribute on this node contains discrete
 	 * values
 	 * 
-	 * @return
+	 * @return true if attribute is discrete
 	 */
-	public boolean isDiscrete() {
-		return Instance.isDiscrete(attribute);
+	public boolean discrete() {
+		return discrete;
+	}
+
+	/**
+	 * Getter method for whether the attribute on this node contains continuous
+	 * values
+	 * 
+	 * @return true if attribute is continuous
+	 */
+	public boolean continuous() {
+		return !discrete;
 	}
 
 	/**
@@ -162,6 +175,10 @@ public class Id3Node extends Node implements Serializable {
 	 */
 	public void setAttribute(String attribute) {
 		this.attribute = attribute;
+		// set discrete flag for this attribute
+		this.discrete = Instance.isDiscrete(attribute);
+		// set missing value fill for this attribute
+		this.fill = instances.majorityAttributeValue(attribute);
 	}
 
 	/**
@@ -208,20 +225,19 @@ public class Id3Node extends Node implements Serializable {
 	}
 
 	/**
-	 * Recursively set all 'instances' to null for each child that belongs to this node
-	 * @param n
+	 * Optional cleanup routine to reduce tree size when serializing to file
 	 */
-	public void clearInstances(Id3Node n) {
-		if (n.children() == null) {
-			return;
-		}
-		if (n.children().size() > 0) {
-			for (Node child : n.children()) {
-				clearInstances(((Id3Node) child));
+	public void clear() {
+		// clear list of attributes tested
+		this.attributesTested = null;
+		// clear set of instances
+		this.instances = null;
+		// clear child nodes
+		if (this.children() != null) {
+			for (Node node : this.children()) {
+				if (node != null)
+					((Id3Node) node).clear();
 			}
 		}
-		n.instances.clearInstancesData();
-		return;
-
 	}
 }

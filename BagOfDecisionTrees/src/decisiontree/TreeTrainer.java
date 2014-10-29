@@ -55,14 +55,22 @@ public class TreeTrainer {
 	public Id3[] getTreesTrainedFromRandomAttributes(int count) {
 		Id3[] trees = new Id3[count];
 
+		int instance_size = (int) Math.sqrt(this.instances.attributes().size());
+		
 		for (int i = 0; i < count; i++) {
 			log.info("Creating tree " + i + " from random attributes");
-			Instances randomInstances = splitInstancesByAttributesRandomly(this.instances);
-
-			trees[i] = new Id3(randomInstances);
-			trees[i].traverse();
-			// Try and clean up the tree of the instance data that it contains
-			// trees[i].dropInstances();
+			
+			Id3 trainer = new Id3(this.instances);
+            // set tree as random forest
+            trainer.setRandomForest(instance_size);
+            // train the tree
+            log.info("Start traversing training tree");
+            trainer.traverse();
+            // clear training data
+            log.info("Clearing training data");
+            trainer.clear();
+            
+			trees[i] = trainer;
 		}
 
 		return trees;
@@ -72,11 +80,18 @@ public class TreeTrainer {
 	 * Create a new tree from a random set of attributes
 	 */
 	public Id3 getTreeTrainedFromRandomAttributes() {
-		Instances randomInstances = splitInstancesByAttributesRandomly(this.instances);
-		Id3 tree = new Id3(randomInstances);
-		tree.traverse();
+
+		int instance_size = (int) Math.sqrt(this.instances.attributes().size());
 		
-		tree.dropInstances();
-		return tree;
+		Id3 trainer = new Id3(this.instances);
+        // set tree as random forest
+        trainer.setRandomForest(instance_size);
+        // train the tree
+        trainer.traverse();
+
+        // clear training data
+        trainer.clear();
+        
+        return trainer;
 	}
 }

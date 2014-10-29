@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.lang3.mutable.Mutable;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -17,13 +16,12 @@ public class Id3 implements Serializable {
 	private static final long serialVersionUID = -781699850100065981L;
 
 	private static final Log log = LogFactory.getLog(Id3.class);
-
-	// compute log(2) constant to help performance
 	private static double log2 = Math.log(2);
-
 	private Instances testInstances;
-	private transient List<Instance> testInstance;
+	private List<Instance> testInstance;
 	private List<String> predicted;
+	private boolean randomForest;
+	private int randomForestSize;
 	private Instances instances;
 	private double accuracy;
 	private Id3Node root;
@@ -35,6 +33,9 @@ public class Id3 implements Serializable {
 		this.instances = instances;
 		// create the root node
 		setRoot(new Id3Node(instances));
+		log.info("Id3 tree created with " + instances.size() + " instances");
+		// default to non-random attribute
+		randomForest = false;
 	}
 
 	/**
@@ -55,9 +56,15 @@ public class Id3 implements Serializable {
 	public void traverse(Id3Node node) {
 		log.info("Traversal node contains " + node.instances().size()
 				+ " instances");
-		// return if there are no instances
-		if (node.instances().size() == 0)
+		// return if node is null
+		if (node == null)
 			return;
+		// return if there are no instances
+		if (node.instances().size() == 0) {
+			log.info("Returning empty node");
+			return;
+		}
+		;
 		// compute purity for instance set
 		node.setPurity(node.instances().classifierPurity());
 		log.info("Node purity " + node.purity());
@@ -71,21 +78,32 @@ public class Id3 implements Serializable {
 			return;
 		}
 		// no further traversal if all attributes tested
-		if (attributesExhausted(node.instances(), node.attributesTested())) {
+		if (!randomForest()
+				&& attributesExhausted(node.instances(),
+						node.attributesTested())) {
 			node.setClassifier(node.instances().majorityClassifier());
 			log.info("Node classifier " + node.classifier()
 					+ ", attributes exhausted");
 			return;
 		}
 		// compute attribute with maximum information gain
-		node.setAttribute(computeMaxInfoGain(node.instances(),
-				node.attributesTested()));
+		if (randomForest()) {
+			// compute max info gain with random sampling of attributes
+			node.setAttribute(computeMaxInfoGain(node.instances(),
+					randomForestAttributes(), null));
+		} else {
+			// compute max info gain with all instance atttributes, maintain
+			// attributes tested
+			node.setAttribute(computeMaxInfoGain(node.instances(),
+					new ArrayList(instances.attributes()),
+					node.attributesTested()));
+		}
 		log.info("Node attribute with max info gain " + node.attribute());
 		// update attributes tested
 		List<String> attributesTested = node.attributesTested();
 		attributesTested.add(node.attribute());
 		// determine if this node has continuous ranged values
-		if (node.isContinuous()) {
+		if (node.continuous()) {
 			/**
 			 * When the attribute selected for the node contains continuous
 			 * ranged values, a binary split algorithm is used to split the
@@ -98,22 +116,28 @@ public class Id3 implements Serializable {
 			// split instances using binary split value
 			Instances[] split = node.instances().split(node.attribute(),
 					node.split());
-			// create child nodes
-			node.setLeft(new Id3Node(split[0], attributesTested, node));
-			log.info("Left node contains " + split[0].size() + " instances");
-			node.setRight(new Id3Node(split[1], attributesTested, node));
-			log.info("Right node contains " + split[1].size() + " instances");
-
-			attributesTested = null;
-			testInstance = null;
-			testInstances = null;
-			split = null;
-
-			// traverse child nodes
-			log.info("Traversing left node");
-			traverse((Id3Node) node.left());
-			log.info("Traversing right node");
-			traverse((Id3Node) node.right());
+			// when either split is null, use majority classification
+			if (split[0].size() == 0) {
+				node.setClassifier(node.instances().majorityClassifier());
+				log.info("Node classifier " + node.classifier()
+						+ ", left split null");
+			} else if (split[1].size() == 0) {
+				node.setClassifier(node.instances().majorityClassifier());
+				log.info("Node classifier " + node.classifier()
+						+ ", right split null");
+			} else {
+				// create child nodes
+				node.setLeft(new Id3Node(split[0], attributesTested, node));
+				log.info("Left node contains " + split[0].size() + " instances");
+				node.setRight(new Id3Node(split[1], attributesTested, node));
+				log.info("Right node contains " + split[1].size()
+						+ " instances");
+				// traverse child nodes
+				log.info("Traversing left node");
+				traverse((Id3Node) node.left());
+				log.info("Traversing right node");
+				traverse((Id3Node) node.right());
+			}
 		} else {
 			/**
 			 * Otherwise, it's assumed that the attribute selected for the node
@@ -137,19 +161,12 @@ public class Id3 implements Serializable {
 				// set the attribute split value
 				children[i].setValue(indexed.get(i));
 			}
-
 			// add child nodes to parent
 			node.add(children);
 			// traverse child nodes
 			for (int i = 0; i < split.length; i++) {
 				traverse(children[i]);
 			}
-
-			attributesTested = null;
-			testInstance = null;
-			testInstances = null;
-			split = null;
-			System.gc();
 		}
 	}
 
@@ -172,6 +189,27 @@ public class Id3 implements Serializable {
 	}
 
 	/**
+	 * Getter method for random attribute selection
+	 * 
+	 * @return
+	 */
+	public boolean randomForest() {
+		return randomForest;
+	}
+
+	/**
+	 * Set random attribute selection, for use in forest of trees implementation
+	 * 
+	 * @param size
+	 */
+	public void setRandomForest(int size) {
+		// set random attribute selection
+		randomForest = true;
+		// set random attribute selection size
+		randomForestSize = size;
+	}
+
+	/**
 	 * Getter method for accuracy
 	 * 
 	 * @return
@@ -188,9 +226,23 @@ public class Id3 implements Serializable {
 	 * @param attributesTested
 	 * @return
 	 */
-	public boolean attributesExhausted(Instances instances,
+	private boolean attributesExhausted(Instances instances,
 			List<String> attributesTested) {
-		return attributesTested.size() >= instances.attributesmap().size();
+		return attributesTested.size() >= instances.attributes().size();
+	}
+
+	/**
+	 * Random attribute selection of the specified size
+	 * 
+	 * @return list of random attributes of a specified size
+	 */
+	private List<String> randomForestAttributes() {
+		// retrieve list of attributes
+		List<String> attributes = new ArrayList<String>(instances.attributes());
+		// shuffle the list randomly
+		Collections.shuffle(attributes);
+		// return a subset of the list
+		return attributes.subList(0, randomForestSize);
 	}
 
 	/**
@@ -268,59 +320,40 @@ public class Id3 implements Serializable {
 	 * 
 	 * @param node
 	 * @param instance
-	 * @return
+	 * @return classification for the given instance
 	 */
 	public String classify(Id3Node node, Instance instance) {
 		// return node classification if defined
-		if (node.classifier() != null) {
+		if (node.classifier() != null)
 			return node.classifier();
-		}
-		
-		if(node.attribute() == null){
-			log.error("Left and Right nodes are null, can not classify instance: "
-					+ instance.toString());
-			return "";
-		}
-		
 		// determine if the attribute on this node is continuous
-		if (node.isContinuous()) {
-			if (node.left() == null && node.right() == null) {
-				log.error("Left and Right nodes are null, can not classify instance: "
-						+ instance.toString());
-				return "";
-			}
+		if (node.continuous()) {
 			// traverse binary child nodes to get classification
 			if (instance.valueDouble(node.attribute()) <= node.split()) {
-				if (node.left() == null) {
-					return classify((Id3Node) node.right(), instance);
-				}
 				return classify((Id3Node) node.left(), instance);
 			} else {
-				if (node.right() == null) {
-					return classify((Id3Node) node.left(), instance);
-				}
 				return classify((Id3Node) node.right(), instance);
 			}
 		} else {
-			// get attribute values for the node
-			Set<String> values = node.instances().values(node.attribute());
+			// get missing value fill
+			String fill = node.fill();
+			// missing value fill node
+			Id3Node fillNode = null;
 			// get current attribute value for the instance
 			String value = instance.value(node.attribute());
-			// determine majority attrinbute value when current is missing
-			if (!values.contains(value)) {
-				value = node.instances().majorityAttributeValue(
-						node.attribute());
-			}
 			// traverse discrete value child nodes to get classification
 			for (Node inode : node.children()) {
 				if (((Id3Node) inode).value().equals(value)) {
+					// return subtree classification
 					return classify((Id3Node) inode, instance);
+				} else if (((Id3Node) inode).value().equals(fill)) {
+					// save fill node in case of missing value
+					fillNode = (Id3Node) inode;
 				}
 			}
+			// return classification for fill node
+			return classify(fillNode, instance);
 		}
-		// this point should be unreachable, but return the majority
-		// classifier as a failsafe
-		return node.instances().majorityClassifier();
 	}
 
 	/**
@@ -434,16 +467,16 @@ public class Id3 implements Serializable {
 	 * @return
 	 */
 	private String computeMaxInfoGain(Instances instances,
-			List<String> attributesTested) {
+			List<String> attributes, List<String> attributesTested) {
 		// get list of attributes
-		Set<String> attributes = instances.attributes();
 		String[] attribute = attributes.toArray(new String[attributes.size()]);
 		// initialize
 		int maxIndex = -1;
 		double maxInfoGain = -1;
 		// compute maximum information gain across all attributes
-		for (int i = 0; i < attribute.length; i++) {
-			if (!attributesTested.contains(attribute[i])) {
+		for (int i = 0; i < attributes.size(); i++) {
+			if (attributesTested == null
+					|| !attributesTested.contains(attribute[i])) {
 				log.info("Computing info gain for attribute " + attribute[i]);
 				double infoGain = computeInfoGain(instances, attribute[i]);
 				if (infoGain > maxInfoGain) {
@@ -576,15 +609,14 @@ public class Id3 implements Serializable {
 		}
 	}
 
-	public void dropInstances() {
-		//this.instances = null;
+	public void clear() {
+		// clear set of training instances
+		this.instances = null;
+		// clear test instance
 		this.testInstance = null;
+		// clear set of test instances
 		this.testInstances = null;
-		this.instances.clearInstancesData();
-		removeAllInstances();
-	}
-
-	public void removeAllInstances() {
-		root.clearInstances(root);
+		// clear training data from tree structure
+		root.clear();
 	}
 }
